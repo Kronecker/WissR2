@@ -42,19 +42,36 @@ double* allocInitVecBDwn(int startIndex, int numElements) {
 
 
 int main (int argc,char *argv[]) {
-    double end, start = MPI_Wtime();
 
-    printf("In");
+
     int rank, size;
     MPI_Init(&argc, &argv);
     MPI_Comm_size(MPI_COMM_WORLD, &size);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
-    double *vecA, *vecB;
+    double *vecA, *vecB, sum=0;
+    double end, start;
+    int numELements;
 
-    vecA=allocInitVecAUp(10,2);
-    vecB=allocInitVecBDwn(10,2);
+
+    if(rank==0) {
+      start  = MPI_Wtime();
+    }
+
+    numElements=N/size;
+    // Allocate Vetors (Malloc) and init with series a_i=i+1  b_i=N-i
+    vecA=allocInitVecAUp(rank*numElements,numElements);
+    vecB=allocInitVecBDwn(rank*numElements,numELements);
+
     // Compute Scalprod
+
+    for(k=0;k<numElements;k++) {
+        printf("%f %f", vecA[k], vecB[k]);
+        sum+=a[k]*b[k];
+    }
+
+    printf("I'm %d : ",rank,sum);
+
 
 
     // Communicate with master and send results
@@ -74,10 +91,15 @@ int main (int argc,char *argv[]) {
     free(vecB);
 
 
+    if(rank==0)  {
+        end = MPI_Wtime();
+        printf("%.6f", end-start);
+    }
+
+
     MPI_Finalize();
-    printf("Out");
-    end = MPI_Wtime();
-    printf('%f', end-start)
+
+
 }
 
 
