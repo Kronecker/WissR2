@@ -10,7 +10,7 @@
 #endif
 
 #ifndef LAST_VECTOR_TAKES_REST
-    #define LAST_VECTOR_TAKES_REST 1
+    #define LAST_VECTOR_TAKES_REST 0
 #endif
 
 #ifndef N
@@ -57,7 +57,7 @@ int main (int argc,char *argv[]) {
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
     double *vecA, *vecB, sum=0;
-    double end, start;
+    double end, start; // MPI Timestamps
     int numElements;
 
 
@@ -78,13 +78,13 @@ int main (int argc,char *argv[]) {
         vecA = allocInitVecAUp(rank * numElements, numElements);
         vecB = allocInitVecBDwn(rank * numElements, numElements);
     }
-#else  
+#else  // Evenly Distributed Vecs
     int restElements=N%size;
     if((rank)<restElements) { // take one for the team
         vecA = allocInitVecAUp(rank * numElements + rank, numElements+1);
         vecB = allocInitVecBDwn(rank * numElements + rank, numElements+1);
         numElements++;
-    }  else  {               // get carried
+    }  else  {               // get away with less
         vecA = allocInitVecAUp(rank * numElements + restElements, numElements);
         vecB = allocInitVecBDwn(rank * numElements + restElements, numElements);
     }
@@ -131,16 +131,13 @@ int main (int argc,char *argv[]) {
 
 
     if(rank==0)  {
-        printf("GlobalSum : %f\n",sum);
         end = MPI_Wtime();
-
+        printf("GlobalSum : %f\n",sum);
         #if USE_MPI_REDUCE
             printf("%d nodes with Reduce in %.6fs\n", size ,end-start);
         #else
             printf("%d nodes with Snd/Rcv in %.6fs\n", size ,end-start);
         #endif
-
-
     }
 
 
