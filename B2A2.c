@@ -41,7 +41,7 @@ double* allocInitVecBDwn(int startIndex, int numElements) {
 
 
 
-int main (int argc,char *argv[]) {
+int main2 (int argc,char *argv[]) {
     printf("In");
     int rank, size;
     MPI_Init(&argc, &argv);
@@ -76,7 +76,10 @@ int main (int argc,char *argv[]) {
     printf("Out");
 }
 
-
+int main(int argc,char *argv[]) {
+    printf('outer');
+    main2(&argc, &argv);
+}
 
 
 
