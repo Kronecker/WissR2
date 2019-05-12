@@ -5,8 +5,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-
-#define USE_MPI_REDUCE 1
+#ifndef USE_MPI_REDUCE
+    #define USE_MPI_REDUCE 1
+#endif
 
 #define N 500000
 
