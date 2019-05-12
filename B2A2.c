@@ -9,14 +9,13 @@
     #define USE_MPI_REDUCE 1
 #endif
 
-
 #ifndef LAST_VECTOR_TAKES_REST
-#define LAST_VECTOR_TAKES_REST 1
+    #define LAST_VECTOR_TAKES_REST 1
 #endif
 
-
-#define N 500000
-
+#ifndef
+    #define N 500000
+#endif
 
 double* allocInitVecAUp(int startIndex, int numElements);
 double* allocInitVecBDwn(int startIndex, int numElements);
@@ -88,7 +87,6 @@ int main (int argc,char *argv[]) {
         vecA = allocInitVecAUp(rank * numElements + restElements, numElements);
         vecB = allocInitVecBDwn(rank * numElements + restElements, numElements);
     }
-
 #endif
 
 
