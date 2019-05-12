@@ -94,9 +94,9 @@ int main (int argc,char *argv[]) {
     // Compute Scalprod
     for(int k=0;k<numElements;k++) {
         sum+=vecA[k]*vecB[k];
-        printf('%f ',vecA[k]);
+        printf("%f ",vecA[k]);
     }
-    printf('\n');
+    printf("\n");
 
 
     MPI_Status status;
