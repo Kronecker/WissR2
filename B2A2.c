@@ -6,6 +6,7 @@
 #include <stdlib.h>
 
 
+#define USE_MPI_REDUCE 1
 
 #define N 500000
 
@@ -72,12 +73,20 @@ int main (int argc,char *argv[]) {
 
 
     MPI_Status status;
+
+
+#if USE_MPI_REDUCE
+
+        MPI_Reduce(&sum,&sum,1,MPI_DOUBLE,MPI_SUM,0,MPI_COMM_WORLD);
+
+#else
+
     double partsum;
     // Communicate with master and send results
     if(rank==0) {
         printf("PartSum %d : %f\n",0,sum);
         // rcv
-        for(k=1;k<size;k++) {
+        for(int k=1;k<size;k++) {
             MPI_Recv(&partsum, 1, MPI_DOUBLE, k, 0, MPI_COMM_WORLD, &status);
             sum+=partsum;
             printf("PartSum %d : %f\n",k,partsum);
@@ -87,6 +96,7 @@ int main (int argc,char *argv[]) {
         MPI_Send(&sum,1,MPI_DOUBLE,0,0,MPI_COMM_WORLD);
     }
 
+#endif
 
     printf("GlobalSum : %f\n",sum);
 
@@ -97,7 +107,7 @@ int main (int argc,char *argv[]) {
 
     if(rank==0)  {
         end = MPI_Wtime();
-        printf("%.6f", end-start);
+        printf("%d nodes in %.6fs\n", size ,end-start);
     }
 
 
