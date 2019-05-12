@@ -79,10 +79,11 @@ int main (int argc,char *argv[]) {
         vecB = allocInitVecBDwn(rank * numElements, numElements);
     }
 #else
-    double restElements=N%size;
+    int restElements=N%size;
     if((rank)<restElements) { // take one for the team
         vecA = allocInitVecAUp(rank * numElements + rank, numElements+1);
         vecB = allocInitVecBDwn(rank * numElements + rank, numElements+1);
+        numElements++;
     }  else  {               // get carried
         vecA = allocInitVecAUp(rank * numElements + restElements, numElements);
         vecB = allocInitVecBDwn(rank * numElements + restElements, numElements);
