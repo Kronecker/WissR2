@@ -3,6 +3,7 @@
 //
 #include <mpi.h>
 #include <stdio.h>
+#include <stlib.h>
 
 
 
@@ -22,7 +23,7 @@ double* allocInitVecBDwn(int startIndex, int numElements);
 double* allocInitVecAUp(int startIndex, int numElements) {
     double* vec;
     vec = (double*) malloc(sizeof(double) * numElements)
-    for (int k=0; k<numElements; k++) {
+    for (int k=0; k<numElements; k++;) {
         vec[k]=k+1+startIndex;
     }
     return vec;
@@ -32,7 +33,7 @@ double* allocInitVecAUp(int startIndex, int numElements) {
 double* allocInitVecBDwn(int startIndex, int numElements) {
     double* vec;
     vec = (double*) malloc(sizeof(double) * numElements)
-    for (int k=0; k<numElements; k++) {
+    for (int k=0; k<numElements; k++;) {
         vec[k]=N-k-startIndex;
     }
     return vec;
