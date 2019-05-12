@@ -3,7 +3,7 @@
 //
 #include <mpi.h>
 #include <stdio.h>
-#include <stlib.h>
+#include <stdlib.h>
 
 
 
@@ -22,8 +22,8 @@ double* allocInitVecBDwn(int startIndex, int numElements);
 
 double* allocInitVecAUp(int startIndex, int numElements) {
     double* vec;
-    vec = (double*) malloc(sizeof(double) * numElements)
-    for (int k=0; k<numElements; k++;) {
+    vec = (double*) malloc(sizeof(double) * numElements);
+    for (int k=0; k<numElements; k++) {
         vec[k]=k+1+startIndex;
     }
     return vec;
@@ -32,8 +32,8 @@ double* allocInitVecAUp(int startIndex, int numElements) {
 
 double* allocInitVecBDwn(int startIndex, int numElements) {
     double* vec;
-    vec = (double*) malloc(sizeof(double) * numElements)
-    for (int k=0; k<numElements; k++;) {
+    vec = (double*) malloc(sizeof(double) * numElements);
+    for (int k=0; k<numElements; k++) {
         vec[k]=N-k-startIndex;
     }
     return vec;
@@ -42,9 +42,9 @@ double* allocInitVecBDwn(int startIndex, int numElements) {
 
 
 int main (int argc,char *argv[]) {
-    printf("Hello world");
+    printf("In");
     int rank, size;
-    MPI_INIT(&argc, char &argv[]);
+    MPI_Init(&argc, &argv);
     MPI_Comm_size(MPI_COMM_WORLD, &size);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
@@ -73,7 +73,7 @@ int main (int argc,char *argv[]) {
 
 
     MPI_Finalize();
-    printf("Hello world");
+    printf("Out");
 }
 
 
