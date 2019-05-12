@@ -51,7 +51,7 @@ int main (int argc,char *argv[]) {
 
     double *vecA, *vecB, sum=0;
     double end, start;
-    int numELements;
+    int numElements;
 
 
     if(rank==0) {
@@ -59,32 +59,36 @@ int main (int argc,char *argv[]) {
     }
 
     numElements=N/size;
-    // Allocate Vetors (Malloc) and init with series a_i=i+1  b_i=N-i
+
+    // Allocate Vectors (Malloc) and init with series a_i=i+1  b_i=N-i
     vecA=allocInitVecAUp(rank*numElements,numElements);
-    vecB=allocInitVecBDwn(rank*numElements,numELements);
+    vecB=allocInitVecBDwn(rank*numElements,numElements);
 
     // Compute Scalprod
-
-    for(k=0;k<numElements;k++) {
-        printf("%f %f", vecA[k], vecB[k]);
-        sum+=a[k]*b[k];
+    for(int k=0;k<numElements;k++) {
+        sum+=vecA[k]*vecB[k];
     }
 
-    printf("I'm %d : ",rank,sum);
 
 
-
+    MPI_Status status;
+    double partsum;
     // Communicate with master and send results
     if(rank==0) {
+        printf("PartSum %d : %f\n",0,sum);
         // rcv
-
+        for(k=1;k<size;k++) {
+            MPI_Recv(&partsum, 1, MPI_DOUBLE, k, 0, MPI_COMM_WORLD, &status);
+            sum+=partsum;
+            printf("PartSum %d : %f\n",k,partsum);
+        }
     }  else  {
         // send
-
+        MPI_Send(&sum,1,MPI_DOUBLE,0,0,MPI_COMM_WORLD);
     }
 
 
-
+    printf("GlobalSum : %f\n",sum);
 
 
     free(vecA);
