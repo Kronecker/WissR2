@@ -108,7 +108,14 @@ int main (int argc,char *argv[]) {
     if(rank==0)  {
         printf("GlobalSum : %f\n",sum);
         end = MPI_Wtime();
-        printf("%d nodes in %.6fs\n", size ,end-start);
+
+        #if USE_MPI_REDUCE
+            printf("%d nodes with Reduce in %.6fs\n", size ,end-start);
+        #else
+            printf("%d nodes with Snd/Rcv in %.6fs\n", size ,end-start);
+        #end
+
+
     }
 
 
