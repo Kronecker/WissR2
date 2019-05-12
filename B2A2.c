@@ -9,6 +9,12 @@
     #define USE_MPI_REDUCE 1
 #endif
 
+
+#ifndef LAST_VECTOR_TAKES_REST
+#define LAST_VECTOR_TAKES_REST 1
+#endif
+
+
 #define N 500000
 
 
@@ -63,40 +69,60 @@ int main (int argc,char *argv[]) {
     numElements=N/size;
 
     // Allocate Vectors (Malloc) and init with series a_i=i+1  b_i=N-i
-    vecA=allocInitVecAUp(rank*numElements,numElements);
-    vecB=allocInitVecBDwn(rank*numElements,numElements);
+
+#if LAST_VECTOR_TAKES_REST
+    if(rank==(size-1)) {
+        vecA = allocInitVecAUp(rank * numElements, numElements);
+        vecB = allocInitVecBDwn(rank * numElements, N-rank*numElements);
+    } else {
+        vecA = allocInitVecAUp(rank * numElements, numElements);
+        vecB = allocInitVecBDwn(rank * numElements, numElements);
+    }
+#else
+    double restElements=N%size;
+    if((rank)<restElements) { // take one for the team
+        vecA = allocInitVecAUp(rank * numElements + rank, numElements+1);
+        vecB = allocInitVecBDwn(rank * numElements + rank, numElements+1);
+    }  else  {               // get carried
+        vecA = allocInitVecAUp(rank * numElements + restElements, numElements);
+        vecB = allocInitVecBDwn(rank * numElements + restElements, numElements);
+    }
+
+#endif
+
 
     // Compute Scalprod
     for(int k=0;k<numElements;k++) {
         sum+=vecA[k]*vecB[k];
+        printf('%f ',vecA[k]);
     }
-
+    printf('\n');
 
 
     MPI_Status status;
 
+    #if USE_MPI_REDUCE  // -------------------------------------------------------------
 
-#if USE_MPI_REDUCE
-    double partsum=sum;
-    // Use Reduce to send all results to Master and Sum all values
-    MPI_Reduce(&partsum,&sum,1,MPI_DOUBLE,MPI_SUM,0,MPI_COMM_WORLD);
-#else
-    double partsum;
-    // Communicate with master and send results
-    if(rank==0) {
-        printf("PartSum %d : %f\n",0,sum);
-        // rcv
-        for(int k=1;k<size;k++) {
-            MPI_Recv(&partsum, 1, MPI_DOUBLE, k, 0, MPI_COMM_WORLD, &status);
-            sum+=partsum;
-            printf("PartSum %d : %f\n",k,partsum);
+        double partsum=sum;
+        // Use Reduce to send all results to Master and Sum all values
+        MPI_Reduce(&partsum,&sum,1,MPI_DOUBLE,MPI_SUM,0,MPI_COMM_WORLD);
+
+    #else  // --------------------------------------------------------------------------
+
+        double partsum;
+        // Communicate with master and send results
+        if(rank==0) {
+            // rcv
+            for(int k=1;k<size;k++) {
+                MPI_Recv(&partsum, 1, MPI_DOUBLE, k, 0, MPI_COMM_WORLD, &status);
+                sum+=partsum;
+            }
+        }  else  {
+            // send
+            MPI_Send(&sum,1,MPI_DOUBLE,0,0,MPI_COMM_WORLD);
         }
-    }  else  {
-        // send
-        MPI_Send(&sum,1,MPI_DOUBLE,0,0,MPI_COMM_WORLD);
-    }
 
-#endif
+    #endif  // -------------------------------------------------------------------------
 
 
 
@@ -113,7 +139,7 @@ int main (int argc,char *argv[]) {
             printf("%d nodes with Reduce in %.6fs\n", size ,end-start);
         #else
             printf("%d nodes with Snd/Rcv in %.6fs\n", size ,end-start);
-        #end
+        #endif
 
 
     }
