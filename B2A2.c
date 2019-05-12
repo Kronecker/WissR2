@@ -73,15 +73,14 @@ int main (int argc,char *argv[]) {
 
 
     MPI_Status status;
-    double partsum=sum;
+
 
 #if USE_MPI_REDUCE
-
-    MPI_Reduce(&sum,&partsum,1,MPI_DOUBLE,MPI_SUM,0,MPI_COMM_WORLD);
-    sum=partsum;
+    double partsum=sum;
+    // Use Reduce to send all results to Master and Sum all values
+    MPI_Reduce(&partsum,&sum,1,MPI_DOUBLE,MPI_SUM,0,MPI_COMM_WORLD);
 #else
-
-
+    double partsum;
     // Communicate with master and send results
     if(rank==0) {
         printf("PartSum %d : %f\n",0,sum);
@@ -98,7 +97,7 @@ int main (int argc,char *argv[]) {
 
 #endif
 
-    printf("GlobalSum : %f\n",sum);
+
 
 
     free(vecA);
@@ -106,6 +105,7 @@ int main (int argc,char *argv[]) {
 
 
     if(rank==0)  {
+        printf("GlobalSum : %f\n",sum);
         end = MPI_Wtime();
         printf("%d nodes in %.6fs\n", size ,end-start);
     }
