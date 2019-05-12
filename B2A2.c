@@ -73,15 +73,15 @@ int main (int argc,char *argv[]) {
 
 
     MPI_Status status;
-
+    double partsum=sum;
 
 #if USE_MPI_REDUCE
 
-        MPI_Reduce(&sum,&sum,1,MPI_DOUBLE,MPI_SUM,0,MPI_COMM_WORLD);
-
+    MPI_Reduce(&sum,&partsum,1,MPI_DOUBLE,MPI_SUM,0,MPI_COMM_WORLD);
+    sum=partsum;
 #else
 
-    double partsum;
+
     // Communicate with master and send results
     if(rank==0) {
         printf("PartSum %d : %f\n",0,sum);
