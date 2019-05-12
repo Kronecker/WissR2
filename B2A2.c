@@ -78,7 +78,7 @@ int main (int argc,char *argv[]) {
         vecA = allocInitVecAUp(rank * numElements, numElements);
         vecB = allocInitVecBDwn(rank * numElements, numElements);
     }
-#else
+#else  
     int restElements=N%size;
     if((rank)<restElements) { // take one for the team
         vecA = allocInitVecAUp(rank * numElements + rank, numElements+1);
@@ -94,9 +94,8 @@ int main (int argc,char *argv[]) {
     // Compute Scalprod
     for(int k=0;k<numElements;k++) {
         sum+=vecA[k]*vecB[k];
-        printf("%f ",vecA[k]);
     }
-    printf("\n");
+
 
 
     MPI_Status status;
@@ -107,7 +106,7 @@ int main (int argc,char *argv[]) {
         // Use Reduce to send all results to Master and Sum all values
         MPI_Reduce(&partsum,&sum,1,MPI_DOUBLE,MPI_SUM,0,MPI_COMM_WORLD);
 
-    #else  // --------------------------------------------------------------------------
+    #else  // SEND & RECEIVE -----------------------------------------------------------
 
         double partsum;
         // Communicate with master and send results
