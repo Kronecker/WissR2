@@ -42,6 +42,8 @@ double* allocInitVecBDwn(int startIndex, int numElements) {
 
 
 int main (int argc,char *argv[]) {
+    double end, start = MPI_Wtime();
+
     printf("In");
     int rank, size;
     MPI_Init(&argc, &argv);
@@ -74,6 +76,8 @@ int main (int argc,char *argv[]) {
 
     MPI_Finalize();
     printf("Out");
+    end = MPI_Wtime();
+    printf('%f', end-start)
 }
 
 
