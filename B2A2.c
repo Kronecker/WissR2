@@ -13,7 +13,7 @@
     #define LAST_VECTOR_TAKES_REST 1
 #endif
 
-#ifndef
+#ifndef N
     #define N 500000
 #endif
 
@@ -71,8 +71,9 @@ int main (int argc,char *argv[]) {
 
 #if LAST_VECTOR_TAKES_REST
     if(rank==(size-1)) {
-        vecA = allocInitVecAUp(rank * numElements, numElements);
+        vecA = allocInitVecAUp(rank * numElements, N-rank*numElements);
         vecB = allocInitVecBDwn(rank * numElements, N-rank*numElements);
+        numElements=N-rank*numElements;
     } else {
         vecA = allocInitVecAUp(rank * numElements, numElements);
         vecB = allocInitVecBDwn(rank * numElements, numElements);
