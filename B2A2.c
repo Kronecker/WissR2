@@ -98,32 +98,42 @@ int main (int argc,char *argv[]) {
             int numOfFirstGens=size/nodesPGen;
                 numOfFirstGens=restProcs?numOfFirstGens+1:numOfFirstGens;
             int parantNodeMod=nodesPGen;
-
+            int gen=1;
 
             int recvFrom=0;
 
             int numInSuccession=rank%nodesPGen;
 
 
-            bool shitHitsTheFan=false;
+
+
+            int shitHitsTheFan=0;
 
             while(!shitHitsTheFan) {
+                 if(!rank) {
+                    printf("-----------\n");
+                 }
 
-                 printf('-----------\n')
+
+                if(rank>=size-restProcs) {  // handle procs without full gen
+                printf("%d ...no full gen" , rank)
+                 }
 
                 if(!(rank%parantNodeMod)) {
                     for(int l=1;l<nodesPGen;l++) {
-                        recvFrom=rank+l;
-                        printf('R: %d <- %d\n',rank,)
+                        printf("R: %d <- %d\n",rank,rank+l);
                     }
                 } else {
-                      printf('S: %d -> %d\n',rank,rank-numInSuccession)
+                      printf("S: %d -> %d\n",rank,rank-numInSuccession);
                 }
 
 
 
 
-                shitHitsTheFan=true;
+
+
+
+                shitHitsTheFan=1;
 
 
 
@@ -149,7 +159,7 @@ int main (int argc,char *argv[]) {
             }
 
 
-        #end
+        #endif
 
 
     #endif  // -------------------------------------------------------------------------
@@ -165,16 +175,16 @@ int main (int argc,char *argv[]) {
         end = MPI_Wtime();
 
         #if USE_MPI_REDUCE
-                printf("%3d MPI nodes in %.6fsm using MPI Reduce", size ,(end-start)*1000);
+                printf("%3d MPI nodes in %.3fsm using MPI Reduce", size ,(end-start)*1000);
         #else
             #if SND_RCV_WITH_TREE
-                printf("%3d MPI nodes in %.6fms using Snd/Rcv Tree with %d nodes", size ,(end-start)*1000, SND_RCV_TREE_NODES);
+                printf("%3d MPI nodes in %.3fms using Snd/Rcv Tree with %d nodes", size ,(end-start)*1000, SND_RCV_TREE_NODES);
             #else
-                printf("%3d MPI nodes in %.6fms using Snd/Rcv Slave->Master", size ,(end-start)*1000);
+                printf("%3d MPI nodes in %.3fms using Snd/Rcv Slave->Master", size ,(end-start)*1000);
             #endif
 
         #endif
-        printf("   GlobalSum : %f\n",sum);
+        printf("   GlobalSum : %e\n",sum);
     }
 
 
