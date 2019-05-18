@@ -1,15 +1,5 @@
-#!/usr/bin/env bash
+#!/bin/bash
 
-make
+clear
 
-
-
-
-
-
-
-
-
-
-
-
+echo "Hi"
