@@ -11,7 +11,7 @@ do
 echo ${fileRun}
 for numProcs in 1 2 4 6 8 16 24 32 48 64
 do
-for i in {1..100}
+for i in {1..10}
 do
     mpirun -n ${numProcs} ${fileRun} >> ${log}
 done
