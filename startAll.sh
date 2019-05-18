@@ -1,7 +1,7 @@
 #!/bin/bash
 echo "Hi"
 numProcs=16
-runs=10
+
 log=logfile.log
 rm ${log}
 touch ${log}
@@ -11,7 +11,7 @@ do
 echo ${fileRun}
 for numProcs in 1 2 4 6 8 16 24 32 48 64
 do
-for i in {1..${runs}}
+for i in {1..100}
 do
     mpirun -n ${numProcs} ${fileRun} >> ${log}
 done
