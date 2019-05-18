@@ -5,3 +5,4 @@ CMakeLists.txt
 *.out
 *.o
 *.log
+*.png
