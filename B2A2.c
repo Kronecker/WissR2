@@ -17,7 +17,7 @@
     #define SND_RCV_WITH_TREE 0
 #endif
 
-#ifndef SND_RCV_TREE_NODES
+#ifndef SND_RCV_TREE_NODES   // only active if  SND_RCV_WITH_TREE is active
     #define SND_RCV_TREE_NODES 2
 #endif
 
@@ -92,53 +92,38 @@ int main (int argc,char *argv[]) {
 
     #else  // SEND & RECEIVE -----------------------------------------------------------
 
-        #if SND_RCV_WITH_TREE // SndRcv with tree, SND_RCV_TREE_NODES determins number of nodes per step
-            int nodesPGen=SND_RCV_TREE_NODES;
-            int restProcs=size%nodesPGen;
-            int numOfFirstGens=size/nodesPGen;
-                numOfFirstGens=restProcs?numOfFirstGens+1:numOfFirstGens;
-            int parantNodeMod=nodesPGen;
-            int gen=1;
+        #if SND_RCV_WITH_TREE // SndRcv with tree, SND_RCV_TREE_NODES determines number of nodes per step
+            int sendingNodes=SND_RCV_TREE_NODES-1;
 
-            int recvFrom=0;
+            int moduloActive=0;
+            int moduloSndRCV;
+            int groupSpan=SND_RCV_TREE_NODES;
+            int innerGroupHops=1;
+            double partsum;
 
-            int numInSuccession=rank%nodesPGen;
+            while(size>innerGroupHops) {
+                if(!moduloActive) {       // ACTIVE
+                    moduloSndRCV=rank%groupSpan;
 
-
-
-
-            int shitHitsTheFan=0;
-
-            while(!shitHitsTheFan) {
-                 if(!rank) {
-                    printf("-----------\n");
-                 }
-                restProcs=size%nodesPGen;
-
-                if(!(rank>=size-restProcs)) {  // handle procs with full gen
-                   restProcs=nodesPGen;
-                } else {
-                     printf("%d ...no full gen" , rank);
-                }
-
-                if(!(rank%parantNodeMod)) {
-                    for(int l=1;l<restProcs;l++) {
-                        printf("R: %d <- %d\n",rank,rank+l);
+                    if(!moduloSndRCV) {   // RECEIVE
+                        if(size-rank < groupSpan) {
+                            sendingNodes=(size-rank-1)/innerGroupHops;
+                        }
+                        for(int k=1;k<=sendingNodes;k++) {
+                            MPI_Recv(&partsum, 1, MPI_DOUBLE, rank+k*innerGroupHops, 0, MPI_COMM_WORLD, &status);
+                            sum+=partsum;
+                        }
+                        sendingNodes=SND_RCV_TREE_NODES-1;
+                    } else {              // SEND
+                        MPI_Send(&sum,1,MPI_DOUBLE,rank-moduloSndRCV,0,MPI_COMM_WORLD);
                     }
-                } else {
-                      printf("S: %d -> %d\n",rank,rank-numInSuccession);
+                } else {                // INACTIVE
+                    break;
                 }
-
-
-                shitHitsTheFan=1;
-
-
-
-
-
+                innerGroupHops=groupSpan;
+                groupSpan*=SND_RCV_TREE_NODES;
+                moduloActive=moduloSndRCV;
             }
-
-
 
         #else // All slaves send to Master 0
 
@@ -173,21 +158,18 @@ int main (int argc,char *argv[]) {
         end = MPI_Wtime();
 
         #if USE_MPI_REDUCE
-                printf("%3d MPI nodes in %.3fsm using MPI Reduce", size ,(end-start)*1000);
+                printf("%3d MPI nodes in %.1fsm using MPI Reduce", size ,(end-start)*1000);
         #else
             #if SND_RCV_WITH_TREE
-                printf("%3d MPI nodes in %.3fms using Snd/Rcv Tree with %d nodes", size ,(end-start)*1000, SND_RCV_TREE_NODES);
+                printf("%3d MPI nodes in %.1fms using Snd/Rcv Tree with %d nodes", size ,(end-start)*1000, SND_RCV_TREE_NODES);
             #else
-                printf("%3d MPI nodes in %.3fms using Snd/Rcv Slave->Master", size ,(end-start)*1000);
+                printf("%3d MPI nodes in %.1fms using Snd/Rcv Slave->Master", size ,(end-start)*1000);
             #endif
 
         #endif
         printf("   GlobalSum : %e\n",sum);
     }
-
-
     MPI_Finalize();
-
 
 }
 
