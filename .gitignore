@@ -6,3 +6,4 @@ CMakeLists.txt
 *.o
 *.log
 *.png
+*.asv
