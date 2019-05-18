@@ -1,10 +1,19 @@
 #!/bin/bash
 echo "Hi"
+numProcs=16
+rm logfile.log
+touch logfile.log
 
-for var in "B2A2_REDUCE.out" "B2A2_SNDRCV_Tree2Nodes.out"
+for fileRun in "B2A2_SNDRCV.out" "B2A2_REDUCE.out" "B2A2_SNDRCV_Tree2Nodes.out" "B2A2_SNDRCV_Tree16Nodes.out"
+do
+
+for numProcs in {1 2 4 6 8 16 24 32 48 64}
 do
 for i in {1..100}
 do
-    echo $var $i
+    mpirun -n $numProcs $fileRun
 done
+
+done
+
 done
