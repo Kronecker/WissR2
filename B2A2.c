@@ -113,14 +113,16 @@ int main (int argc,char *argv[]) {
                  if(!rank) {
                     printf("-----------\n");
                  }
+                restProcs=size%nodesPGen;
 
-
-                if(rank>=size-restProcs) {  // handle procs without full gen
-                printf("%d ...no full gen" , rank)
-                 }
+                if(!(rank>=size-restProcs)) {  // handle procs with full gen
+                   restProcs=nodesPGen;
+                } else {
+                     printf("%d ...no full gen" , rank);
+                }
 
                 if(!(rank%parantNodeMod)) {
-                    for(int l=1;l<nodesPGen;l++) {
+                    for(int l=1;l<restProcs;l++) {
                         printf("R: %d <- %d\n",rank,rank+l);
                     }
                 } else {
@@ -128,12 +130,8 @@ int main (int argc,char *argv[]) {
                 }
 
 
-
-
-
-
-
                 shitHitsTheFan=1;
+
 
 
 
