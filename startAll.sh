@@ -1,6 +1,6 @@
 #!/bin/bash
-echo "Hi"
-numProcs=16
+echo "Hello there!"
+
 
 log=logfile.log
 rm ${log}
