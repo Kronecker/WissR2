@@ -7,6 +7,10 @@
 #include <mpi.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <iostream>
+#include <math.h>
+#include <fstream>
+
 
 #ifndef INNER_GRID_SIZE
     #define INNER_GRID_SIZE 1024
@@ -21,7 +25,7 @@ void saveMyMatrix(double* matrix, int m,int n, double h, int numberTask);
 int main_jacobiSeriell (int argc,char *argv[]) {
 
     int n=INNER_GRID_SIZE+2;
-    double* matrix
+    double* matrix;
 
   //  initMatrixRightHandSide
 
