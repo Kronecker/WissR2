@@ -33,18 +33,18 @@ int main_jacobiSeriell (int argc,char *argv[]) {
 
 }
 
-double* prepareGridAndExtendWithBoundaryVals(double n, double boundary) {
+double* prepareGridAndExtendWithBoundaryVals(int n, double boundary) {
 
     double* matrix=new double[n*n]();
 
     // boundary values init (outer)
     for(int i=0;i<n;i++) {
-        matrix[i]=valBoundary;
-        matrix[n*(n-1)+i]=valBoundary;
+        matrix[i]=boundary;
+        matrix[n*(n-1)+i]=boundary;
     }
     for(int k=1;k<n-1;k++) { // iterate through blocks
-        matrix[k*n]=valBoundary;
-        matrix[(k+1)*n-1]=valBoundary;
+        matrix[k*n]=boundary;
+        matrix[(k+1)*n-1]=boundary;
     }
 
     return matrix;
@@ -107,8 +107,8 @@ void saveMyMatrix(double* matrix, int m,int n, double h, int numberTask) {
 
 
 
-    dlouble x;
-    dlouble y;
+    double x;
+    double y;
     for (int i=0;i<m;i++) {
         for (int j=0;j<n;j++) {
             x=h*i;
