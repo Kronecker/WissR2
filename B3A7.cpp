@@ -15,26 +15,66 @@
 #ifndef INNER_GRID_SIZE
     #define INNER_GRID_SIZE 1024
 #endif
-
+#ifndef SHOW_MATRIX
+    #define SHOW_MATRIX 0
+#endif
+#ifndef SAVE_MATRIX
+    #define SAVE_MATRIX 0
+#endif
 
 double* initMatrixRightHandSideSeriell(int n, double h  );
 void jacobiIterationWithExtGridSeriell(int n, double *f, double valBoundary, int* numberOfIterations, double h);
 void displayMyMatrix(double* matrix, int m,int n);
 void saveMyMatrix(double* matrix, int m,int n, double h, int numberTask);
+double* prepareGridAndExtendWithBoundaryVals(int n, double boundary);
+int main_jacobiSeriell (int argc,char *argv[]);
+
+
+int main(int argc,char *argv[]) {
+    main_jacobiSeriell(argc, argv);
+}
+
+
 
 int main_jacobiSeriell (int argc,char *argv[]) {
 
     int n=INNER_GRID_SIZE+2;
-    double* matrix;
+    double *currentIteration, *lastIteration, *f;
+    double h;
 
-  //  initMatrixRightHandSide
-
-    matrix=prepareGridAndExtendWithBoundaryVals(n,1);
-
-
-    displayMyMatrix(matrix,n,n);
+    h=1/(INNER_GRID_SIZE+1);
 
 
+
+
+    currentIteration=prepareGridAndExtendWithBoundaryVals(n,0);
+    lastIteration=prepareGridAndExtendWithBoundaryVals(n,0);
+
+    f=initMatrixRightHandSide(n,h);
+
+
+    for (int k=0;k<1000;k++) {
+        jacobiIterationWithExtGridSeriell(n, f, currentIteration, lastIteration, 1, h);
+    }
+
+
+
+
+
+
+
+
+    #if SHOW_MATRIX
+        displayMyMatrix(lastIteration,n,n);
+    #endif
+
+    #if SAVE_MATRIX
+        saveMyMatrix(lastIteration,n,n,1,42);
+    #endif
+
+    delete(f);
+    delete(currentIteration);
+    delete(lastIteration);
 }
 
 double* prepareGridAndExtendWithBoundaryVals(int n, double boundary) {
@@ -59,16 +99,33 @@ double* prepareGridAndExtendWithBoundaryVals(int n, double boundary) {
 
 void jacobiIterationWithExtGridSeriell(int n, double *f, double* gridActualIteration, double* gridLastIteration, int* numberOfIterations, double h) {
 
+    double* temp:
+    iteration=0;  // ignored
 
+    // some caching
+    double hSquareBy4=h*h/4.;
+    double oneBy4= 1/4.;
+    int nm1=n-1;
 
+    for(k=1;k<nm1;k++)  {
+        for(i=1;i<nm1;i++) {
+            index=k*n+i;
+            gridActualIteration[index]=hSquareBy4 * f[index]
+                    + oneBy4 *(gridLastIteration[index-n]+gridLastIteration[index-1]+gridLastIteration[index+1]+gridLastIteration[index+n]);
+        }
+    }
 
+        // Swap pointers
+    temp=gridLastIteration ;
+    gridLastIteration=gridActualIteration;
+    gridActualIteration=temp;
 
 
 }
 
 
 
-double* initMatrixRightHandSide(int n, double h  ) {
+double* initMatrixRightHandSide(int n, double h  ) {   // parts of the matrix correspond to boundary values and are irrelevant
     double*matrix=new double[n*n];
     double x;
     double y;
