@@ -1,12 +1,13 @@
 numProc=4
 CFLAGS=-O3
-all: B2A1 B2A2
+all: B2A1 B2A2 B3A7
 
 clean:
 	rm *.out
 B2A1: B2A1.c
 	mpicc B2A1.c -o B2A1.out $(CFLAGS)
-
+B3A7: B3A7.cpp
+	mpicc B3A7.cpp -o B3A7_seriell.out $(CFLAGS) -DINNER_GRID_SIZE=32
 B2A1run: B2A1
 	mpirun -n $(numProc) B2A1.out
 B2A2: B2A2_SNDRCV B2A2_MPIREDUCE B2A2_SNDRCVTREE_2NODESTREE B2A2_SNDRCVTREE_16NODESTREE
