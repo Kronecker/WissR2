@@ -233,7 +233,7 @@ int main_jacobiMPI(int argc, char *argv[]) {
     int yProcs = divi, xProcs = size / divi;
 
 
-    // determin next neighbours
+    // determine next neighbours
     int nn_left, nn_up, nn_right, nn_down;
     if (!(rank % yProcs)) {
         nn_left = -1;
@@ -341,15 +341,6 @@ int main_jacobiMPI(int argc, char *argv[]) {
 }
 
 
-/*
-          for (int k = 0; k < size; k++) {
-            if (rank == k) {
-                saveMyMatrixOffset(f, numElX, numElY, startX, startY, h, 42);
-            }
-            MPI_Barrier(MPI_COMM_WORLD);
-        }
-
- */
 
 void jacobiIterationWithExtGridParallel(int numElX, int numElY, double *f, double *gridCurrentIteration,
                                         double *gridLastIteration,
@@ -476,7 +467,7 @@ void jacobiIterationWithExtGridParallelFullAsync(int numElX, int numElY, double 
 
         // Iteration over all points that do not need boundary values
         for (k = 2; k < xm2; k++) {
-            for (i = 1; i < ym1; i++) {
+            for (i = 2; i < ym2; i++) {
                 index = k * numElY + i;
                 gridCurrentIteration[index] = oneBy4 * (hSquare * f[index]
                                                         + (gridLastIteration[index - numElY] +
@@ -557,7 +548,7 @@ void jacobiIterationWithExtGridParallelFullAsync(int numElX, int numElY, double 
 
 
 
-        // Send & Revc Async  (Non Blocking)
+        // Send & Recv Async  (Non Blocking)
         if(nn_left>=0)
             MPI_Isend(&gridCurrentIteration[1], 1, column, nn_left, 0, MPI_COMM_WORLD,&sendLeft);
         if(nn_up>=0)
@@ -748,204 +739,3 @@ saveMyMatrixMPI(double *matrix, int m, int n, int offsetM, int offsetN, double h
 
 
 //</editor-fold>
-
-
-
-/*
- *
- *
- *         // Comm Left
-        if(rank%2) {
-            if (nn_left >= 0) {
-                printf("%d sending to %d\n",rank,nn_left);
-                MPI_Send(&gridCurrentIteration[1], 1, column, nn_left, 0, MPI_COMM_WORLD);
-            }
-        } else {
-            if (nn_right >= 0) {
-                printf("%d receiving from %d\n",rank,nn_right);
-                MPI_Recv(&gridCurrentIteration[numElY - 1], 1, column, nn_right, 0, MPI_COMM_WORLD, &status);
-            }
-        }
-
-        if(!(rank%2)) {
-            if (nn_left > 0) {
-                MPI_Send(&gridCurrentIteration[1], 1, column, nn_left, 0, MPI_COMM_WORLD);
-            }
-        } else {
-            if (nn_right > 0) {
-                MPI_Recv(&gridCurrentIteration[numElY - 1], 1, column, nn_right, 0, MPI_COMM_WORLD, &status);
-            }
-        }
-
-
-
-        // Comm Up
-        if(rank%2) {
-            if (nn_up >= 0) {
-                printf("%d sending to %d\n",rank,nn_up);
-                MPI_Send(&gridCurrentIteration[1], 1, column, nn_up, 0, MPI_COMM_WORLD);
-            }
-        } else {
-            if (nn_down >= 0) {
-                printf("%d receiving from %d\n",rank,nn_down);
-                MPI_Recv(&gridCurrentIteration[numElY - 1], 1, column, nn_down, 0, MPI_COMM_WORLD, &status);
-            }
-        }
-
-        if(!(rank%2)) {
-            if (nn_up > 0) {
-                MPI_Send(&gridCurrentIteration[1], 1, column, nn_up, 0, MPI_COMM_WORLD);
-            }
-        } else {
-            if (nn_down > 0) {
-                MPI_Recv(&gridCurrentIteration[numElY - 1], 1, column, nn_down, 0, MPI_COMM_WORLD, &status);
-            }
-        }
-
-
-        // Comm Right
-        if(rank%2) {
-            if (nn_right >= 0) {
-                printf("%d sending to %d\n",rank,nn_right);
-                MPI_Send(&gridCurrentIteration[1], 1, column, nn_right, 0, MPI_COMM_WORLD);
-            }
-        } else {
-            if (nn_left >= 0) {
-                printf("%d receiving from %d\n",rank,nn_left);
-                MPI_Recv(&gridCurrentIteration[numElY - 1], 1, column, nn_left, 0, MPI_COMM_WORLD, &status);
-            }
-        }
-
-        if(!(rank%2)) {
-            if (nn_right > 0) {
-                MPI_Send(&gridCurrentIteration[1], 1, column, nn_right, 0, MPI_COMM_WORLD);
-            }
-        } else {
-            if (nn_left > 0) {
-                MPI_Recv(&gridCurrentIteration[numElY - 1], 1, column, nn_left, 0, MPI_COMM_WORLD, &status);
-            }
-        }
-
-        // Comm Down
-
-        // Comm Right
-        if(rank%2) {
-            if (nn_right >= 0) {
-                printf("%d sending to %d\n",rank,nn_right);
-                MPI_Send(&gridCurrentIteration[1], 1, column, nn_right, 0, MPI_COMM_WORLD);
-            }
-        } else {
-            if (nn_left >= 0) {
-                printf("%d receiving from %d\n",rank,nn_left);
-                MPI_Recv(&gridCurrentIteration[numElY - 1], 1, column, nn_left, 0, MPI_COMM_WORLD, &status);
-            }
-        }
-
-        if(!(rank%2)) {
-            if (nn_right > 0) {
-                MPI_Send(&gridCurrentIteration[1], 1, column, nn_right, 0, MPI_COMM_WORLD);
-            }
-        } else {
-            if (nn_left > 0) {
-                MPI_Recv(&gridCurrentIteration[numElY - 1], 1, column, nn_left, 0, MPI_COMM_WORLD, &status);
-            }
-        }
-        // Comm Left
-        if(rank%2) {
-            if (nn_left >= 0) {
-                printf("%d sending to %d\n",rank,nn_left);
-                MPI_Send(&gridCurrentIteration[1], 1, column, nn_left, 0, MPI_COMM_WORLD);
-            }
-        } else {
-            if (nn_right >= 0) {
-                printf("%d receiving from %d\n",rank,nn_right);
-                MPI_Recv(&gridCurrentIteration[numElY - 1], 1, column, nn_right, 0, MPI_COMM_WORLD, &status);
-            }
-        }
-
-        if(!(rank%2)) {
-            if (nn_left > 0) {
-                MPI_Send(&gridCurrentIteration[1], 1, column, nn_left, 0, MPI_COMM_WORLD);
-            }
-        } else {
-            if (nn_right > 0) {
-                MPI_Recv(&gridCurrentIteration[numElY - 1], 1, column, nn_right, 0, MPI_COMM_WORLD, &status);
-            }
-        }
-
-
-
-        // Comm Up
-        if(rank%2) {
-            if (nn_up >= 0) {
-                printf("%d sending to %d\n",rank,nn_up);
-                MPI_Send(&gridCurrentIteration[1], 1, column, nn_up, 0, MPI_COMM_WORLD);
-            }
-        } else {
-            if (nn_down >= 0) {
-                printf("%d receiving from %d\n",rank,nn_down);
-                MPI_Recv(&gridCurrentIteration[numElY - 1], 1, column, nn_down, 0, MPI_COMM_WORLD, &status);
-            }
-        }
-
-        if(!(rank%2)) {
-            if (nn_up > 0) {
-                MPI_Send(&gridCurrentIteration[1], 1, column, nn_up, 0, MPI_COMM_WORLD);
-            }
-        } else {
-            if (nn_down > 0) {
-                MPI_Recv(&gridCurrentIteration[numElY - 1], 1, column, nn_down, 0, MPI_COMM_WORLD, &status);
-            }
-        }
-
-
-        // Comm Right
-        if(rank%2) {
-            if (nn_right >= 0) {
-                printf("%d sending to %d\n",rank,nn_right);
-                MPI_Send(&gridCurrentIteration[1], 1, column, nn_right, 0, MPI_COMM_WORLD);
-            }
-        } else {
-            if (nn_left >= 0) {
-                printf("%d receiving from %d\n",rank,nn_left);
-                MPI_Recv(&gridCurrentIteration[numElY - 1], 1, column, nn_left, 0, MPI_COMM_WORLD, &status);
-            }
-        }
-
-        if(!(rank%2)) {
-            if (nn_right > 0) {
-                MPI_Send(&gridCurrentIteration[1], 1, column, nn_right, 0, MPI_COMM_WORLD);
-            }
-        } else {
-            if (nn_left > 0) {
-                MPI_Recv(&gridCurrentIteration[numElY - 1], 1, column, nn_left, 0, MPI_COMM_WORLD, &status);
-            }
-        }
-
-        // Comm Down
-
-        // Comm Right
-        if(rank%2) {
-            if (nn_right >= 0) {
-                printf("%d sending to %d\n",rank,nn_right);
-                MPI_Send(&gridCurrentIteration[1], 1, column, nn_right, 0, MPI_COMM_WORLD);
-            }
-        } else {
-            if (nn_left >= 0) {
-                printf("%d receiving from %d\n",rank,nn_left);
-                MPI_Recv(&gridCurrentIteration[numElY - 1], 1, column, nn_left, 0, MPI_COMM_WORLD, &status);
-            }
-        }
-
-        if(!(rank%2)) {
-            if (nn_right > 0) {
-                MPI_Send(&gridCurrentIteration[1], 1, column, nn_right, 0, MPI_COMM_WORLD);
-            }
-        } else {
-            if (nn_left > 0) {
-                MPI_Recv(&gridCurrentIteration[numElY - 1], 1, column, nn_left, 0, MPI_COMM_WORLD, &status);
-            }
-        }
-
-
- */

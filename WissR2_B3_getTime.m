@@ -3,7 +3,7 @@
 fid=fopen('logfile.log');
 
 typeAlgoName={'Sync'};
-procNums=[1:16];
+procNums=[1:16,32,48,64];
 
 getRMS=1;
 numOfDataPoints=10;
@@ -48,11 +48,23 @@ end
 fclose(fid);
 
 dataStd=std(data,0,3);
-data=sum(data,3)./dataNums;
+dataSum=sum(data,3)./dataNums;
 
-errorbar(repmat(procNums',[1,numel(typeAlgoName)]),data/1000,dataStd/1000);
+
+data=squeeze(data);
+data=sort(data,2);
+
+data=data(:,1:end-3);
+dataNumsCut=dataNums-3;
+
+dataStd=std(data,0,2);
+
+dataSum=sum(data,2)./dataNumsCut;
+
+errorbar(repmat(procNums(1:end-3)',[1,numel(typeAlgoName)]),(dataSum(1:end-3))/1000,dataStd(1:end-3)/1000);
 ax=axis();
-axis([ax(1:2),0,ax(4)]);
+axis([0.75 ax(2),0,ax(4)]);
 legend(typeAlgoName);
-xlabel('Anzahl Prozessoren');
+xlabel('Anzahl MPI Nodes');
 ylabel('Laufzeit [ms]');
+title([{'2000 Jacobi-Iteration auf 1024x1024 inneren Gitterpunkten'},{'Asynchrone Kommunikation mit MPI'},{'CPU: 2 physische Kerne mit je 2 logischen Kernen'}])
