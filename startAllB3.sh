@@ -13,7 +13,7 @@ for i in {1..5}
 do
 for numProcs in {1..16}
 do
-    mpirun -n ${numProcs} ${fileRun} >> ${log}
+    mpirun -n ${numProcs} ${fileRun} | tee -a ${log}
 done
 
 done
