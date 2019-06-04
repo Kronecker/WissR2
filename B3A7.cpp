@@ -30,6 +30,12 @@
 #ifndef JACOBI_ITERATIONS
 #define JACOBI_ITERATIONS 2000
 #endif
+#ifndef COMM_SYNC
+#define COMM_SYNC 1
+#endif
+#ifndef GO_FULL_ASYNC
+#define GO_FULL_ASYNC 0
+#endif
 
 
 // Seriell
@@ -187,6 +193,11 @@ void jacobiIterationWithExtGridParallel(int numElX, int numElY, double *f, doubl
 void commOverBoundaries(int nn_oneD, int nn_otherD, double *dataSend, double *dataRecv, MPI_Datatype dataType,
                         int numOfDatas, int rank);
 
+void jacobiIterationWithExtGridParallelFullAsync(int numElX, int numElY, double *f, double *gridCurrentIteration,
+                                                 double *gridLastIteration,
+                                                 int numberOfIterations, double h, int nn_left, int nn_up, int nn_right,
+                                                 int nn_down, int rank);
+
 int main_jacobiMPI(int argc, char *argv[]) {
 
     int rank, size;
@@ -298,14 +309,20 @@ int main_jacobiMPI(int argc, char *argv[]) {
 #endif
 
 
+#if GO_FULL_ASYNC
+    jacobiIterationWithExtGridParallelFullAsync(numElX, numElY, f, currentIteration, lastIteration,
+                                       JACOBI_ITERATIONS, h, nn_left, nn_up, nn_right, nn_down, rank);
+#else
     jacobiIterationWithExtGridParallel(numElX, numElY, f, currentIteration, lastIteration,
                                        JACOBI_ITERATIONS, h, nn_left, nn_up, nn_right, nn_down, rank);
+#endif
+
 
 
     MPI_Barrier(MPI_COMM_WORLD);
     if (rank == 0) {  // Master measures time
         end = MPI_Wtime();
-        printf("%3d MPI nodes in %.1fms\n", size, (end - start) * 1000);
+        printf("%3d MPI nodes in %.1fms [%d in x | %d in y]\n", size, (end - start) * 1000, xProcs, yProcs);
     }
 
 
@@ -345,8 +362,10 @@ void jacobiIterationWithExtGridParallel(int numElX, int numElY, double *f, doubl
     MPI_Type_vector(numElX, 1, numElY, MPI_DOUBLE, &column);
     MPI_Type_commit(&column);
 
-
-
+#if COMM_SYNC==0
+    MPI_Request recvLeft, recvUp, recvRight, recvDown;
+    MPI_Request sendLeft, sendUp, sendRight, sendDown;
+#endif
 
     // some caching
     double hSquare = h * h;
@@ -370,6 +389,8 @@ void jacobiIterationWithExtGridParallel(int numElX, int numElY, double *f, doubl
         }
 
 
+#if COMM_SYNC
+
         commOverBoundaries(nn_left, nn_right, &gridCurrentIteration[1], &gridCurrentIteration[numElY - 1], column, 1,
                            rank);
         commOverBoundaries(nn_up, nn_down, &gridCurrentIteration[numElY], &gridCurrentIteration[(numElX - 1) * numElY],
@@ -378,6 +399,45 @@ void jacobiIterationWithExtGridParallel(int numElX, int numElY, double *f, doubl
                            rank);
         commOverBoundaries(nn_down, nn_up, &gridCurrentIteration[(numElX - 2) * numElY], &gridCurrentIteration[0],
                            MPI_DOUBLE, numElY, rank);
+#else
+
+        if(nn_left>=0)
+            MPI_Isend(&gridCurrentIteration[1], 1, column, nn_left, 0, MPI_COMM_WORLD,&sendLeft);
+        if(nn_up>=0)
+            MPI_Isend(&gridCurrentIteration[numElY], numElY, MPI_DOUBLE, nn_up, 0, MPI_COMM_WORLD,&sendUp);
+        if(nn_right>=0)
+            MPI_Isend(&gridCurrentIteration[numElY - 2], 1, column, nn_right, 0, MPI_COMM_WORLD,&sendRight);
+        if(nn_down>=0)
+            MPI_Isend(&gridCurrentIteration[(numElX - 2) * numElY], numElY, MPI_DOUBLE, nn_down, 0, MPI_COMM_WORLD,&sendDown);
+
+        if(nn_right>=0)
+            MPI_Irecv(&gridCurrentIteration[numElY - 1], 1, column, nn_right, 0, MPI_COMM_WORLD,&recvRight);
+        if(nn_down>=0)
+            MPI_Irecv(&gridCurrentIteration[(numElX - 1) * numElY], numElY, MPI_DOUBLE, nn_down, 0, MPI_COMM_WORLD,&recvDown);
+        if(nn_left>=0)
+            MPI_Irecv(&gridCurrentIteration[0], 1, column, nn_left, 0, MPI_COMM_WORLD,&recvLeft);
+        if(nn_up>=0)
+            MPI_Irecv(&gridCurrentIteration[0], numElY, MPI_DOUBLE, nn_up, 0, MPI_COMM_WORLD,&recvUp);
+
+
+
+        if(nn_left>=0) {
+            MPI_Wait(&sendLeft, &status);
+            MPI_Wait(&recvLeft, &status);
+         }
+        if(nn_up>=0) {
+            MPI_Wait(&sendUp, &status);
+            MPI_Wait(&recvUp, &status);
+        }
+        if(nn_right>=0){
+            MPI_Wait(&sendRight, &status);
+            MPI_Wait(&recvRight, &status);
+        }
+        if(nn_down>=0){
+            MPI_Wait(&sendDown, &status);
+            MPI_Wait(&recvDown, &status);
+        }
+#endif
 
         temp = gridCurrentIteration;
         gridCurrentIteration = gridLastIteration;
@@ -386,6 +446,150 @@ void jacobiIterationWithExtGridParallel(int numElX, int numElY, double *f, doubl
 
     MPI_Type_free(&column);
 }
+
+
+void jacobiIterationWithExtGridParallelFullAsync(int numElX, int numElY, double *f, double *gridCurrentIteration,
+                                        double *gridLastIteration,
+                                        int numberOfIterations, double h, int nn_left, int nn_up, int nn_right,
+                                        int nn_down, int rank) {
+    double *temp;
+    MPI_Datatype column;
+    MPI_Status status;
+
+    MPI_Type_vector(numElX, 1, numElY, MPI_DOUBLE, &column);
+    MPI_Type_commit(&column);
+
+
+    MPI_Request recvLeft, recvUp, recvRight, recvDown;
+    MPI_Request sendLeft, sendUp, sendRight, sendDown;
+
+
+    // some caching
+    double hSquare = h * h;
+    double oneBy4 = 1 / 4.;
+    int xm2 = numElX - 2, xm1 = numElX - 1;
+    int ym2 = numElY - 2, ym1 = numElY - 1;
+
+    int i, k, index;
+
+    for (int l = 0; l < numberOfIterations; l++) {
+
+        // Iteration over all points that do not need boundary values
+        for (k = 2; k < xm2; k++) {
+            for (i = 1; i < ym1; i++) {
+                index = k * numElY + i;
+                gridCurrentIteration[index] = oneBy4 * (hSquare * f[index]
+                                                        + (gridLastIteration[index - numElY] +
+                                                           gridLastIteration[index - 1] +
+                                                           gridLastIteration[index + 1] +
+                                                           gridLastIteration[index + numElY]));
+            }
+        }
+
+        // All boundary values received and sent?
+        if(l) {
+            if(nn_left>=0) {
+                MPI_Wait(&sendLeft, &status);
+                MPI_Wait(&recvLeft, &status);
+            }
+            if(nn_up>=0) {
+                MPI_Wait(&sendUp, &status);
+                MPI_Wait(&recvUp, &status);
+            }
+            if(nn_right>=0){
+                MPI_Wait(&sendRight, &status);
+                MPI_Wait(&recvRight, &status);
+            }
+            if(nn_down>=0){
+                MPI_Wait(&sendDown, &status);
+                MPI_Wait(&recvDown, &status);
+            }
+        }
+
+
+        // Iterate through all points that have boundary values
+        k=1;
+        for (i = 1; i < ym1; i++) {
+            index = k * numElY + i;
+            gridCurrentIteration[index] = oneBy4 * (hSquare * f[index]
+                                                    + (gridLastIteration[index - numElY] +
+                                                       gridLastIteration[index - 1] +
+                                                       gridLastIteration[index + 1] +
+                                                       gridLastIteration[index + numElY]));
+        }
+
+        k=xm2;
+        for (i = 1; i < ym1; i++) {
+            index = k * numElY + i;
+            gridCurrentIteration[index] = oneBy4 * (hSquare * f[index]
+                                                    + (gridLastIteration[index - numElY] +
+                                                       gridLastIteration[index - 1] +
+                                                       gridLastIteration[index + 1] +
+                                                       gridLastIteration[index + numElY]));
+        }
+
+        i=1;
+        for (k = 1; k < xm1; k++) {
+
+                index = k * numElY + i;
+                gridCurrentIteration[index] = oneBy4 * (hSquare * f[index]
+                                                        + (gridLastIteration[index - numElY] +
+                                                           gridLastIteration[index - 1] +
+                                                           gridLastIteration[index + 1] +
+                                                           gridLastIteration[index + numElY]));
+
+        }
+        i=ym2;
+        for (k = 1; k < xm1; k++) {
+
+            index = k * numElY + i;
+            gridCurrentIteration[index] = oneBy4 * (hSquare * f[index]
+                                                    + (gridLastIteration[index - numElY] +
+                                                       gridLastIteration[index - 1] +
+                                                       gridLastIteration[index + 1] +
+                                                       gridLastIteration[index + numElY]));
+
+        }
+
+
+
+
+
+
+
+        // Send & Revc Async  (Non Blocking)
+        if(nn_left>=0)
+            MPI_Isend(&gridCurrentIteration[1], 1, column, nn_left, 0, MPI_COMM_WORLD,&sendLeft);
+        if(nn_up>=0)
+            MPI_Isend(&gridCurrentIteration[numElY], numElY, MPI_DOUBLE, nn_up, 0, MPI_COMM_WORLD,&sendUp);
+        if(nn_right>=0)
+            MPI_Isend(&gridCurrentIteration[numElY - 2], 1, column, nn_right, 0, MPI_COMM_WORLD,&sendRight);
+        if(nn_down>=0)
+            MPI_Isend(&gridCurrentIteration[(numElX - 2) * numElY], numElY, MPI_DOUBLE, nn_down, 0, MPI_COMM_WORLD,&sendDown);
+
+        if(nn_right>=0)
+            MPI_Irecv(&gridCurrentIteration[numElY - 1], 1, column, nn_right, 0, MPI_COMM_WORLD,&recvRight);
+        if(nn_down>=0)
+            MPI_Irecv(&gridCurrentIteration[(numElX - 1) * numElY], numElY, MPI_DOUBLE, nn_down, 0, MPI_COMM_WORLD,&recvDown);
+        if(nn_left>=0)
+            MPI_Irecv(&gridCurrentIteration[0], 1, column, nn_left, 0, MPI_COMM_WORLD,&recvLeft);
+        if(nn_up>=0)
+            MPI_Irecv(&gridCurrentIteration[0], numElY, MPI_DOUBLE, nn_up, 0, MPI_COMM_WORLD,&recvUp);
+
+
+
+
+
+        // Swap pointers
+        temp = gridCurrentIteration;
+        gridCurrentIteration = gridLastIteration;
+        gridLastIteration = temp;
+    }
+
+    MPI_Type_free(&column);
+}
+
+
 
 void commOverBoundaries(int nn_oneD, int nn_otherD, double *dataSend, double *dataRecv, MPI_Datatype dataType,
                         int numOfDatas, int rank) {

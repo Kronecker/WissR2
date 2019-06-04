@@ -9,9 +9,9 @@ touch ${log}
 for fileRun in "B3scripted.out"
 do
 echo ${fileRun}
-for numProcs in {1..12}
+for i in {1..5}
 do
-for i in {1..10}
+for numProcs in {1..16}
 do
     mpirun -n ${numProcs} ${fileRun} >> ${log}
 done
