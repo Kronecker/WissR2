@@ -19,10 +19,16 @@
 #define SHOW_MATRIX 0
 #endif
 #ifndef SAVE_MATRIX
-#define SAVE_MATRIX 0
+#define SAVE_MATRIX 1
 #endif
 #ifndef MPI_PARALLEL
 #define MPI_PARALLEL 0
+#endif
+#ifndef MPI_PARALLEL
+#define SHOW_PROC_LAYOUT 1
+#endif
+#ifndef JACOBI_ITERATIONS
+#define JACOBI_ITERATIONS 2000
 #endif
 
 
@@ -63,7 +69,12 @@ int main(int argc, char *argv[]) {
 int main_jacobiSeriell(int argc, char *argv[]) {
 
     int n = INNER_GRID_SIZE + 2;
-    printf("%d\n", n);
+
+    double end, start; // MPI Timestamps
+
+    start = MPI_Wtime();
+
+
     double *currentIteration, *lastIteration, *f;
     double h;
 
@@ -74,7 +85,11 @@ int main_jacobiSeriell(int argc, char *argv[]) {
 
     f = initMatrixRightHandSideSeriell(n, h);
 
-    jacobiIterationWithExtGridSeriell(n, f, currentIteration, lastIteration, 500, h);
+    jacobiIterationWithExtGridSeriell(n, f, currentIteration, lastIteration, JACOBI_ITERATIONS, h);
+
+
+    end = MPI_Wtime();
+    printf("%3d SERIELL node in %.1fms\n", 1, (end - start) * 1000);
 
 
 #if SHOW_MATRIX
@@ -82,7 +97,7 @@ int main_jacobiSeriell(int argc, char *argv[]) {
 #endif
 
 #if SAVE_MATRIX
-    saveMyMatrix(lastIteration,n,n,h,42);
+    saveMyMatrix(lastIteration, n, n, h, 42);
 #endif
 
     delete (f);
@@ -158,7 +173,9 @@ void jacobiIterationWithExtGridSeriell(int n, double *f, double *gridCurrentIter
 
 double *initMatrixRightHandSideParallel(int startX, int numElX, int startY, int numElY, double h);
 
-void saveMyMatrixMPI(double *matrix, int m, int n, int offsetM, int offsetN, double h, int numberTask, int rank, int size);
+void
+saveMyMatrixMPI(double *matrix, int m, int n, int offsetM, int offsetN, double h, int numberTask, int rank, int size,
+                int nn_left, int nn_up, int nn_right, int nn_down);
 
 double *prepareGridParallel(int numElX, int numElY);
 
@@ -176,6 +193,11 @@ int main_jacobiMPI(int argc, char *argv[]) {
     MPI_Init(&argc, &argv);
     MPI_Comm_size(MPI_COMM_WORLD, &size);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
+    double end, start; // MPI Timestamps
+    if (rank == 0) {  // Master measures time
+        start = MPI_Wtime();
+    }
 
 
     int n = INNER_GRID_SIZE + 2;
@@ -226,10 +248,6 @@ int main_jacobiMPI(int argc, char *argv[]) {
         nn_down = rank + yProcs;
     }
 
-
-    //printf("%d: %d %d %d %d\n",rank,nn_left,nn_up,nn_right,nn_down);
-
-
     // evenly distribute grid points
     int numElY, numElX;
     int restEl;
@@ -237,9 +255,6 @@ int main_jacobiMPI(int argc, char *argv[]) {
 
     numElY = INNER_GRID_SIZE / yProcs;
     restEl = INNER_GRID_SIZE % yProcs;
-
-    // startY=rank%yProcs * numElY + rank%yProcs;
-
 
     if ((rank % yProcs) < restEl) {  // take one for the team
         startY = (rank % yProcs) * (numElY) + rank % yProcs;
@@ -258,16 +273,18 @@ int main_jacobiMPI(int argc, char *argv[]) {
         startX = (rank / yProcs) * numElX + restEl;
     }
 
-    // printf("%d for %d: X: %d to %d (%d) Y: %d to %d (%d)\n", INNER_GRID_SIZE, rank, startX, startX+numElX-1,numElX, startY, startY+numElY-1,numElY);
+    // Add boundaries
     numElX += 2;
     numElY += 2;
 
+    // Init Vectors with 0
     currentIteration = prepareGridParallel(numElX, numElY);
     lastIteration = prepareGridParallel(numElX, numElY);
 
     f = initMatrixRightHandSideParallel(startX, numElX, startY, numElY, h);
 
 
+#if SHOW_PROC_LAYOUT
     if (!rank) {
         printf("%d Procs: [%d in x | %d in y]\n", size, xProcs, yProcs);
         int l;
@@ -277,17 +294,25 @@ int main_jacobiMPI(int argc, char *argv[]) {
             }
             printf("\n");
         }
-
-
     }
+#endif
 
 
     jacobiIterationWithExtGridParallel(numElX, numElY, f, currentIteration, lastIteration,
-                                       2000, h, nn_left, nn_up, nn_right, nn_down, rank);
+                                       JACOBI_ITERATIONS, h, nn_left, nn_up, nn_right, nn_down, rank);
 
 
-    saveMyMatrixMPI(lastIteration, numElX, numElY, startX, startY, h, 42, rank, size);
+    MPI_Barrier(MPI_COMM_WORLD);
+    if (rank == 0) {  // Master measures time
+        end = MPI_Wtime();
+        printf("%3d MPI nodes in %.1fms\n", size, (end - start) * 1000);
+    }
 
+
+#if SAVE_MATRIX
+    saveMyMatrixMPI(lastIteration, numElX, numElY, startX, startY, h, 42, rank, size, nn_left, nn_up, nn_right,
+                    nn_down);
+#endif
 
     delete (f);
     delete (currentIteration);
@@ -456,11 +481,14 @@ void saveMyMatrix(double *matrix, int m, int n, double h, int numberTask) {
     myfile.close();
 }
 
-void saveMyMatrixMPI(double *matrix, int m, int n, int offsetM, int offsetN, double h, int numberTask, int rank, int size) {
+void
+saveMyMatrixMPI(double *matrix, int m, int n, int offsetM, int offsetN, double h, int numberTask, int rank, int size,
+                int nn_left, int nn_up, int nn_right, int nn_down) {
     // h=1 for save indices
     std::ofstream myfile;
     double x;
     double y;
+    int startI = 0, startJ = 0;
 
 
     for (int k = 0; k < size; k++) {
@@ -481,8 +509,23 @@ void saveMyMatrixMPI(double *matrix, int m, int n, int offsetM, int offsetN, dou
                     myfile.open("./results_temp.dat", std::ios::app);
             }
 
-            for (int i = 0; i < m; i++) {
-                for (int j = 0; j < n; j++) {
+
+            if (!nn_left < 0) {   // ignore ghost boundaries
+                startJ = 1;
+            }
+            if (!nn_up < 0) {
+                startI = 1;
+            }
+            if (!nn_right < 0) {
+                n--;
+            }
+            if (!nn_down < 0) {
+                m--;
+            }
+
+
+            for (int i = startI; i < m; i++) {
+                for (int j = startJ; j < n; j++) {
                     x = h * (i + offsetM);
                     y = h * (j + offsetN);
                     // printf("<%d %d %f>",x,y,matrix[i*m+j]);
@@ -495,7 +538,6 @@ void saveMyMatrixMPI(double *matrix, int m, int n, int offsetM, int offsetN, dou
         }
         MPI_Barrier(MPI_COMM_WORLD);
     }
-
 
 
 }
