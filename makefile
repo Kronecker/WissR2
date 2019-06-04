@@ -1,4 +1,4 @@
-CFLAGS=-O3
+CFLAGS=
 all: B3A7Seriell B3A7Parallel B3A7FullAsync B3A7scripted
 
 clean:
