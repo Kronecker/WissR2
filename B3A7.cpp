@@ -24,7 +24,7 @@
 #ifndef MPI_PARALLEL
 #define MPI_PARALLEL 0
 #endif
-#ifndef MPI_PARALLEL
+#ifndef SHOW_PROC_LAYOUT
 #define SHOW_PROC_LAYOUT 1
 #endif
 #ifndef JACOBI_ITERATIONS
