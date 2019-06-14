@@ -67,33 +67,20 @@ int main() {
 
     printf("Start Iteration\n\n");
     for(int k=0;k<MAX_ITER;k++) {
-        //printf("%d\n\n",k);
 
-        //printf("Matrix Multiplikation (matrix free), Cache Result into A*p(k)\n");
         matrixMult5PointStar(conjVec, cacheATimesConjVec, n);
-        //displayMyMatrix(cacheATimesConjVec,n,n);
-        //printf("\n\n\n");
-        //displayMyMatrix(conjVec,n,n);
-        //printf("Cache p(k)T*A*p(k)T\n");
-        cacheConjVecTimesATimesConjVec=scalProd(conjVec,cacheATimesConjVec,nSquare);
-        //printf("%e\n",cacheConjVecTimesATimesConjVec);
 
-        //printf("Alpha\n");
+        cacheConjVecTimesATimesConjVec=scalProd(conjVec,cacheATimesConjVec,nSquare);
+
         alpha=scalProd(conjVec,residual,nSquare)/cacheConjVecTimesATimesConjVec;
 
-        //printf("x(k+1) = x(k) + alpha*p(k)\n");
         fMA(currentIteration,alpha,conjVec,currentIteration,nSquare);
 
-        //printf("r(k+1) = r(k) - alpha*(A*p(k))\n");
         fMA(residual, -alpha, cacheATimesConjVec, residual, nSquare);
 
-        //printf("Beta\n");
         beta=scalProd(residual,cacheATimesConjVec, nSquare)/cacheConjVecTimesATimesConjVec;
-        //printf("p(k+1) = r(k) - beta*p(k)\n");
+
         fMA(residual, -beta, conjVec, conjVec, nSquare);
-
-        //printf("Alpha: %e, Beta: %e, Cached pAp: %e", alpha, beta,cacheConjVecTimesATimesConjVec);
-
     }
 
 #if SAVE_MATRIX
