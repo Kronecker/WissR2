@@ -8,7 +8,11 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include<time.h>
+#include <time.h>
+
+#include <mpi.h>
+
+
 
 #ifndef INNER_GRID_SIZE
 #define INNER_GRID_SIZE 1024
@@ -22,9 +26,18 @@
 #ifndef MAX_ITER
 #define MAX_ITER 1000
 #endif
+#ifndef PARALLEL
+#define PARALLEL 1
+#endif
 
 
 
+
+
+
+
+
+// Seriell
 void saveMyMatrix(double *matrix, int m, int n, double h, int numberTask);
 double* prepareGridAndExtendWithBoundaryVals(int n);
 double* initMatrixRightHandSideSeriell(int n, double h);
@@ -33,8 +46,27 @@ void matrixMult5PointStar(double* rightSideVec, double* resultVec, int n);
 void fMA (double* vecA, double scalar, double* vecB, double *resultVec, int length);
 void displayMyMatrix(double *matrix, int m, int n);
 
+
+
+// Parallel
+saveMyMatrixMPI(double *matrix, int m, int n, int offsetM, int offsetN, double h, int numberTask, int rank, int size,
+                int nn_left, int nn_up, int nn_right, int nn_down)
+
+
+
+
+
 int main() {
-    std::cout << "Hello, World!" << std::endl;
+    std::cout << "Hello there!" << std::endl;
+#if PARALLEL
+    main_Parallel()
+#else
+    main_Seriell();
+#endif
+
+}
+
+int main_Seriell() {
 
     int n = INNER_GRID_SIZE + 2;
     int nSquare=n*n;
@@ -219,3 +251,78 @@ void displayMyMatrix(double *matrix, int m, int n) {
         printf(" \n");
     }
 }
+
+
+
+
+
+
+
+
+
+saveMyMatrixMPI(double *matrix, int m, int n, int offsetM, int offsetN, double h, int numberTask, int rank, int size,
+                int nn_left, int nn_up, int nn_right, int nn_down) {
+    // h=1 for save indices
+    std::ofstream myfile;
+    double x;
+    double y;
+    int startI = 0, startJ = 0;
+
+
+    for (int k = 0; k < size; k++) {
+        if (rank == k) {
+            if (!rank) {
+                if (numberTask == 0)
+                    myfile.open("./results_a.dat", std::ios::trunc);
+                else if (numberTask == 1)
+                    myfile.open("./results_b.dat", std::ios::trunc);
+                else
+                    myfile.open("./results_temp.dat", std::ios::trunc);
+            } else {
+                if (numberTask == 0)
+                    myfile.open("./results_a.dat", std::ios::app);
+                else if (numberTask == 1)
+                    myfile.open("./results_b.dat", std::ios::app);
+                else
+                    myfile.open("./results_temp.dat", std::ios::app);
+            }
+
+
+            if (!nn_left < 0) {   // ignore ghost boundaries
+                startJ = 1;
+            }
+            if (!nn_up < 0) {
+                startI = 1;
+            }
+            if (!nn_right < 0) {
+                n--;
+            }
+            if (!nn_down < 0) {
+                m--;
+            }
+
+
+            for (int i = startI; i < m; i++) {
+                for (int j = startJ; j < n; j++) {
+                    x = h * (i + offsetM);
+                    y = h * (j + offsetN);
+                    // printf("<%d %d %f>",x,y,matrix[i*m+j]);
+                    myfile << x << " " << y << " " << matrix[i * n + j] << "\n";
+                }
+                myfile << std::endl;
+                // printf(" \n");
+            }
+            myfile.close();
+        }
+        MPI_Barrier(MPI_COMM_WORLD);
+    }
+
+
+}
+
+
+
+
+
+
+
