@@ -7,5 +7,6 @@ CMakeLists.txt
 *.log
 *.png
 *.asv
+*.exe
 Blatt2.txt
 Blatt3.txt
