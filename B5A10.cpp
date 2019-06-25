@@ -21,11 +21,14 @@
 #ifndef SAVE_MATRIX
 #define SAVE_MATRIX 1
 #endif
-#ifndef JACOBI_ITERATIONS
-#define JACOBI_ITERATIONS 200
+#ifndef SOR_ITERATIONS
+#define SOR_ITERATIONS 200
 #endif
 #ifndef SCHWARZ_ITERATIONS
 #define SCHWARZ_ITERATIONS 50
+#endif
+#ifndef RELAXATION_FACTOR
+#define RELAXATION_FACTOR 1.75
 #endif
 
 
@@ -34,26 +37,61 @@ void saveMyMatrix(double *matrix, int m, int n, double h, int numberTask);
 
 
 
-void gsIteration(int nx, int ny, double *f, double *gridCurrentIteration,
+void sorIteration(int nx, int ny, double *f, double *gridCurrentIteration,
                  int numberOfIterations, double h);
-void pushBoundariesToRight(int nx ,int ny, double *gridLeft,double *gridRight);
-void pushBoundariesToLeft(int nx ,int ny, double *gridRight,double *gridLeft);
+void pushBoundariesToRight(int nx ,int ny, double *gridLeft,double *gridRight, int overlap);
+void pushBoundariesToLeft(int nx ,int ny, double *gridRight,double *gridLeft, int overlap);
+void saveSlice (double* slice, int n, int create, int nx);
 
 
-int main() {
+
+int main(int argc,char *argv[]) {
 
 
-    if (INNER_GRID_SIZE < INNER_GRID_SIZE_LEFT_SIDE ) {
-        std::cout << "Grid size is too small" << std::endl;
-        return 0;
+    int innerGridSizeLeftSide=INNER_GRID_SIZE_LEFT_SIDE;
+    int schwarz_iterations=SCHWARZ_ITERATIONS;
+
+    if(argc>1)  {
+
+        innerGridSizeLeftSide=atoi(argv[1]);
+        if (INNER_GRID_SIZE < innerGridSizeLeftSide ) {
+            std::cout << "StartParam: Grid size is too small" << std::endl;
+            return 0;
+        }
+        if (INNER_GRID_SIZE > 2*innerGridSizeLeftSide ) {
+            std::cout << "StartParam: Overlapp is too small" << std::endl;
+            return 0;
+        }
+
+        if(argc>2)  {
+
+
+            schwarz_iterations=atoi(argv[2]);
+
+        }
+
+
+
+    } else {
+
+
+        if (INNER_GRID_SIZE < INNER_GRID_SIZE_LEFT_SIDE) {
+            std::cout << "MakroParam: Grid size is too small" << std::endl;
+            return 0;
+        }
+        if (INNER_GRID_SIZE > 2 * INNER_GRID_SIZE_LEFT_SIDE) {
+            std::cout << "MakroParam: Overlapp is too small" << std::endl;
+            return 0;
+        }
+
     }
-    if (INNER_GRID_SIZE > 2*INNER_GRID_SIZE_LEFT_SIDE ) {
-        std::cout << "Overlapp is too small" << std::endl;
-        return 0;
-    }
 
-    int nx = INNER_GRID_SIZE_LEFT_SIDE + 2;
+    std::cout<<"Alternierender Schwarz mit Nx = "<<  innerGridSizeLeftSide  << " und " << schwarz_iterations << " Schwarz-Iterationen."<<std::endl;
+
+
+    int nx = innerGridSizeLeftSide + 2;
     int ny = INNER_GRID_SIZE + 2;
+    int overlap=2*innerGridSizeLeftSide-INNER_GRID_SIZE;
 
     int numel = nx * ny;
 
@@ -80,17 +118,17 @@ int main() {
     }
 
 
+    double *slice=new double[schwarz_iterations];
 
+    for(int k=0;k<schwarz_iterations;k++) {
 
-    for(int k=0;k<SCHWARZ_ITERATIONS;k++) {
-
-        gsIteration(nx, ny, rhSide_Left, gridLeft, JACOBI_ITERATIONS, h);
-        pushBoundariesToRight(nx, ny, gridLeft, gridRight);
-        gsIteration(nx, ny, rhSide_Right, gridRight, JACOBI_ITERATIONS, h);
-        pushBoundariesToLeft(nx, ny, gridRight, gridLeft);
-
+        sorIteration(nx, ny, rhSide_Left, gridLeft, SOR_ITERATIONS, h);
+        pushBoundariesToRight(nx, ny, gridLeft, gridRight, overlap);
+        sorIteration(nx, ny, rhSide_Right, gridRight, SOR_ITERATIONS, h);
+        pushBoundariesToLeft(nx, ny, gridRight, gridLeft, overlap);
+        slice[k]=gridRight[ny/2*nx+overlap/2];
     }
-
+    saveSlice(slice,schwarz_iterations,0,innerGridSizeLeftSide);
 
 
 #if SAVE_MATRIX
@@ -107,21 +145,21 @@ int main() {
 }
 
 
-void pushBoundariesToRight(int nx ,int ny, double *gridLeft,double *gridRight) {
+void pushBoundariesToRight(int nx ,int ny, double *gridLeft,double *gridRight, int overlap) {
     for(int k=0;k<ny;k++) {
-        gridRight[k*nx]=gridLeft[(nx-1)+(k*nx)];
+        gridRight[k*nx]=gridLeft[(nx-3-overlap)+(k*nx)];  // -3 == -1 for boundary, -2 for inner<->outer
     }
 }
 
-void pushBoundariesToLeft(int nx ,int ny, double *gridRight,double *gridLeft) {
+void pushBoundariesToLeft(int nx ,int ny, double *gridRight,double *gridLeft, int overlap) {
     for(int k=0;k<ny;k++) {
-        gridLeft[(nx)+(k*nx)]=gridRight[k*nx];
+        gridLeft[(nx-1)+(k*nx)]=gridRight[overlap+1+k*nx];
     }
 }
 
 
 
-void gsIteration(int nx, int ny, double *f, double *gridCurrentIteration,
+void sorIteration(int nx, int ny, double *f, double *gridCurrentIteration,
                                        int numberOfIterations, double h) {
     // some caching
     double hSquare = h * h;
@@ -129,21 +167,45 @@ void gsIteration(int nx, int ny, double *f, double *gridCurrentIteration,
     int nxm1 = nx - 1;
     int nym1 = ny - 1;
     int i, k, index;
+    double relaxa=RELAXATION_FACTOR;  // relaxation factor
 
     for (int l = 0; l < numberOfIterations; l++) {
 
         for (k = 1; k < nym1; k++) {
             for (i = 1; i < nxm1; i++) {
                 index = k * nx + i;
-                gridCurrentIteration[index] = oneBy4 * (hSquare * f[index]
+                gridCurrentIteration[index] = oneBy4 * relaxa* (hSquare * f[index]
                                                         + (gridCurrentIteration[index - nx] +
                                                            gridCurrentIteration[index - 1] +
                                                            gridCurrentIteration[index + 1] +
-                                                           gridCurrentIteration[index + nx]));
+                                                           gridCurrentIteration[index + nx]))
+                                               + gridCurrentIteration[index]*(1-relaxa);
             }
         }
     }
 
+
+}
+
+void saveSlice (double* slice, int n, int create, int nx) {
+
+    std::ofstream myfile;
+
+        if(create) {
+            myfile.open("./slice.dat",std::ios::trunc);
+        }else {
+            myfile.open("./slice.dat",std::ios::app);
+        }
+
+        myfile << "\"Nx = " << nx << "\""<<std::endl;
+        for (int j = 0; j < n; j++) {
+
+            myfile << j+1 << "\t" << slice[j] <<std::endl;
+        }
+        myfile<<std::endl<<std::endl;
+
+
+    myfile.close();
 
 }
 
